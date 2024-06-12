@@ -6,20 +6,16 @@ from prometheus_client import CollectorRegistry, Gauge, generate_latest
 
 app = FastAPI()
 
-# Load Kubernetes configuration (In-cluster configuration)
 config.load_incluster_config()
 
-# Define the model for the request body if needed (e.g., image, replicas)
 class DeploymentConfig(BaseModel):
     image: str
     replicas: int
 
 @app.post("/createDeployment/{deployment_name}")
 async def create_deployment(deployment_name: str, config: DeploymentConfig):
-    # Kubernetes API client
     api_instance = client.AppsV1Api()
     
-    # Define the deployment spec
     deployment = client.V1Deployment(
         api_version="apps/v1",
         kind="Deployment",
@@ -40,10 +36,9 @@ async def create_deployment(deployment_name: str, config: DeploymentConfig):
         )
     )
 
-    # Create the deployment
     try:
         api_response = api_instance.create_namespaced_deployment(
-            namespace="default",  # You can change the namespace as needed
+            namespace="default",
             body=deployment
         )
         return {"message": "Deployment created successfully", "details": str(api_response)}
@@ -52,11 +47,9 @@ async def create_deployment(deployment_name: str, config: DeploymentConfig):
 
 @app.get("/getPromdetails")
 async def get_prom_details():
-    # Initialize Kubernetes API client
     v1 = client.CoreV1Api()
     
     try:
-        # Fetch the list of all running pods
         pods = v1.list_pod_for_all_namespaces(watch=False)
         pod_details = []
         for pod in pods.items:
@@ -69,18 +62,15 @@ async def get_prom_details():
             }
             pod_details.append(pod_info)
         
-        # Initialize Prometheus registry and gauge
         registry = CollectorRegistry()
         gauge = Gauge('pod_running_status', 'Pod running status', ['namespace', 'pod_name', 'node_name'], registry=registry)
-        
-        # Update gauge with pod details
+
         for pod in pod_details:
             if pod['status'] == 'Running':
                 gauge.labels(namespace=pod['namespace'], pod_name=pod['name'], node_name=pod['node_name']).set(1)
             else:
                 gauge.labels(namespace=pod['namespace'], pod_name=pod['name'], node_name=pod['node_name']).set(0)
         
-        # Generate Prometheus metrics
         prom_metrics = generate_latest(registry)
         
         return {
