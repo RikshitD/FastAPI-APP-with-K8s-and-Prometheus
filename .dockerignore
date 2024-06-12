@@ -1,0 +1,5 @@
+# Ignore all files except the ones needed for the Docker build
+**
+!Dockerfile
+!prometheus.yml
+!requirements.txt

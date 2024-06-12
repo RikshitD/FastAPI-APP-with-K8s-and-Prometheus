@@ -1,0 +1,4 @@
+fastapi
+uvicorn
+kubernetes
+prometheus_client
